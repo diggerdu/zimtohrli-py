@@ -1,0 +1,104 @@
+[build-system]
+requires = [
+    "setuptools>=61.0",
+    "wheel",
+    "pybind11>=2.10.0",
+    "numpy>=1.19.0",
+    "cmake>=3.15",
+    "ninja; platform_system != 'Windows'",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zimtohrli"
+version = "1.0.0"
+description = "Python binding for Zimtohrli: psychoacoustic perceptual audio similarity metric"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Google Zimtohrli Team"},
+    {name = "Python binding contributors"},
+]
+maintainers = [
+    {name = "Zimtohrli Python Maintainers"},
+]
+keywords = [
+    "audio",
+    "psychoacoustic", 
+    "perceptual",
+    "similarity",
+    "music",
+    "sound",
+    "quality",
+    "zimtohrli"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: C++",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Multimedia :: Sound/Audio :: Analysis",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "numpy>=1.19.0",
+]
+
+[project.optional-dependencies]
+audio = [
+    "soundfile>=0.12.0",
+    "librosa>=0.8.0",
+]
+dev = [
+    "pytest>=6.0",
+    "pytest-cov",
+    "black",
+    "isort",
+    "flake8",
+]
+docs = [
+    "sphinx",
+    "sphinx-rtd-theme",
+    "myst-parser",
+]
+all = [
+    "zimtohrli[audio,dev,docs]"
+]
+
+[project.urls]
+Homepage = "https://github.com/google/zimtohrli"
+Documentation = "https://github.com/google/zimtohrli/blob/main/README_PYTHON_BINDING.md"
+Repository = "https://github.com/google/zimtohrli"
+"Bug Tracker" = "https://github.com/google/zimtohrli/issues"
+
+[tool.setuptools]
+packages = ["zimtohrli_py"]
+package-dir = {"zimtohrli_py" = "zimtohrli_py"}
+
+[tool.setuptools.package-data]
+zimtohrli_py = ["*.so", "*.dll", "*.dylib"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
