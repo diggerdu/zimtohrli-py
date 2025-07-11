@@ -18,6 +18,30 @@ This will check for missing dependencies and provide specific installation comma
 
 **Symptoms**: Installation gets stuck at `Building wheel for zimtohrli (pyproject.toml) ... -`
 
+### 2. Protobuf Download Failure  
+
+**Symptoms**: 
+```
+[0/8] Performing download step (git clone) for 'protobuf-populate'
+fatal: could not create work tree dir '': No such file or directory
+CMake Error: Failed to clone repository: 'https://github.com/protocolbuffers/protobuf.git'
+```
+
+**Solutions**:
+```bash
+# Use offline installation (recommended)
+./install_offline.sh
+
+# Or install system protobuf first
+sudo apt install libprotobuf-dev  # Ubuntu
+conda install protobuf            # Conda
+
+# Then retry normal installation
+pip install zimtohrli
+```
+
+### 3. Build Hangs or Times Out
+
 **Solutions**:
 ```bash
 # Try single-threaded build

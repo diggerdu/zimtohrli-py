@@ -28,6 +28,12 @@ Zimtohrli is a perceptual audio similarity metric that quantifies how different 
 pip install zimtohrli
 ```
 
+**If installation fails due to network issues:**
+```bash
+# Use offline installation (no network required)
+./install_offline.sh
+```
+
 ### System Dependencies
 
 The package requires some system libraries. Install them first:

@@ -1,0 +1,146 @@
+cmake_minimum_required(VERSION 3.15)
+project(zimtohrli_python_offline)
+
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Debug: Print important variables
+message(STATUS "CMAKE_CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
+message(STATUS "CMAKE_CURRENT_BINARY_DIR: ${CMAKE_CURRENT_BINARY_DIR}")
+
+# Find required packages with better error handling
+find_package(PkgConfig REQUIRED)
+find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+
+# Try to find system protobuf first
+find_package(Protobuf QUIET)
+find_package(absl QUIET)
+
+if(Protobuf_FOUND AND absl_FOUND)
+    message(STATUS "✅ Using system protobuf and absl")
+else()
+    message(STATUS "⚠️  System protobuf/absl not found, using pkg-config fallback")
+    
+    # Try pkg-config for protobuf
+    pkg_check_modules(PROTOBUF protobuf)
+    if(PROTOBUF_FOUND)
+        message(STATUS "✅ Found protobuf via pkg-config: ${PROTOBUF_VERSION}")
+    else()
+        message(WARNING "❌ protobuf not found - this may cause build issues")
+    endif()
+endif()
+
+# Find audio libraries
+message(STATUS "Checking for required audio libraries...")
+
+pkg_check_modules(FLAC REQUIRED flac)
+pkg_check_modules(OGG REQUIRED ogg)
+pkg_check_modules(VORBIS REQUIRED vorbis)
+pkg_check_modules(VORBISENC REQUIRED vorbisenc)
+pkg_check_modules(SOXR REQUIRED soxr)
+
+# Create the Python extension
+message(STATUS "Creating Python extension...")
+
+add_library(_zimtohrli SHARED
+    pyohrli.cc
+)
+
+# Set target properties for Python extension
+set_target_properties(_zimtohrli PROPERTIES
+    PREFIX ""
+    SUFFIX ""
+)
+
+# Handle different platforms
+if(WIN32)
+    set_target_properties(_zimtohrli PROPERTIES SUFFIX ".pyd")
+elseif(APPLE)
+    set_target_properties(_zimtohrli PROPERTIES SUFFIX ".so")
+else()
+    set_target_properties(_zimtohrli PROPERTIES SUFFIX ".so")
+endif()
+
+# Include directories
+target_include_directories(_zimtohrli PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${Python3_INCLUDE_DIRS}
+)
+
+# Add a minimal absl replacement if needed
+if(NOT absl_FOUND)
+    message(STATUS "Creating minimal absl replacement...")
+    
+    # Create minimal check.h replacement
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/absl/log/check.h" 
+"#pragma once
+#include <cassert>
+#include <iostream>
+
+#define CHECK(condition) assert(condition)
+#define CHECK_EQ(a, b) assert((a) == (b))
+#define CHECK_NE(a, b) assert((a) != (b))
+#define CHECK_LT(a, b) assert((a) < (b))
+#define CHECK_LE(a, b) assert((a) <= (b))
+#define CHECK_GT(a, b) assert((a) > (b))
+#define CHECK_GE(a, b) assert((a) >= (b))
+#define CHECK_NOTNULL(ptr) assert((ptr) != nullptr); (ptr)
+
+#define DCHECK CHECK
+#define DCHECK_EQ CHECK_EQ
+#define DCHECK_NE CHECK_NE
+#define DCHECK_LT CHECK_LT
+#define DCHECK_LE CHECK_LE
+#define DCHECK_GT CHECK_GT
+#define DCHECK_GE CHECK_GE
+")
+    
+    target_include_directories(_zimtohrli PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+endif()
+
+# Link libraries with conditional linking
+message(STATUS "Linking libraries...")
+
+target_link_libraries(_zimtohrli PRIVATE
+    Python3::Python
+    ${SOXR_LIBRARIES}
+)
+
+# Link protobuf if available
+if(Protobuf_FOUND)
+    target_link_libraries(_zimtohrli PRIVATE protobuf::libprotobuf)
+elseif(PROTOBUF_FOUND)
+    target_link_libraries(_zimtohrli PRIVATE ${PROTOBUF_LIBRARIES})
+    target_include_directories(_zimtohrli PRIVATE ${PROTOBUF_INCLUDE_DIRS})
+endif()
+
+# Link absl if available
+if(absl_FOUND)
+    target_link_libraries(_zimtohrli PRIVATE
+        absl::check
+        absl::span
+        absl::statusor
+        absl::flags_parse
+    )
+endif()
+
+# Add library directories
+target_link_directories(_zimtohrli PRIVATE
+    ${SOXR_LIBRARY_DIRS}
+)
+
+# Add compile definitions
+target_compile_definitions(_zimtohrli PRIVATE
+    PY_SSIZE_T_CLEAN
+)
+
+# Compiler-specific options (reduced optimization for faster compilation)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    target_compile_options(_zimtohrli PRIVATE
+        -fPIC
+        -O2  # Reduced from O3
+    )
+endif()
+
+message(STATUS "✅ CMake configuration completed successfully!")
