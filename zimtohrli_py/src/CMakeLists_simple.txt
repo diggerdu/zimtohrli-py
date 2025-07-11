@@ -1,0 +1,151 @@
+cmake_minimum_required(VERSION 3.15)
+project(zimtohrli_python_simple)
+
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Debug: Print important variables
+message(STATUS "CMAKE_CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
+message(STATUS "CMAKE_CURRENT_BINARY_DIR: ${CMAKE_CURRENT_BINARY_DIR}")
+message(STATUS "Python3_INCLUDE_DIRS: ${Python3_INCLUDE_DIRS}")
+message(STATUS "Python3_LIBRARIES: ${Python3_LIBRARIES}")
+
+# Find required packages with better error handling
+find_package(PkgConfig REQUIRED)
+if(NOT PkgConfig_FOUND)
+    message(FATAL_ERROR "pkg-config is required but not found")
+endif()
+
+find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+if(NOT Python3_FOUND)
+    message(FATAL_ERROR "Python3 development headers not found")
+endif()
+
+# Check for required libraries one by one
+message(STATUS "Checking for required audio libraries...")
+
+pkg_check_modules(FLAC REQUIRED flac)
+if(FLAC_FOUND)
+    message(STATUS "✅ FLAC found: ${FLAC_VERSION}")
+else()
+    message(FATAL_ERROR "❌ FLAC library not found")
+endif()
+
+pkg_check_modules(OGG REQUIRED ogg)
+if(OGG_FOUND)
+    message(STATUS "✅ OGG found: ${OGG_VERSION}")
+else()
+    message(FATAL_ERROR "❌ OGG library not found")
+endif()
+
+pkg_check_modules(VORBIS REQUIRED vorbis)
+if(VORBIS_FOUND)
+    message(STATUS "✅ Vorbis found: ${VORBIS_VERSION}")
+else()
+    message(FATAL_ERROR "❌ Vorbis library not found")
+endif()
+
+pkg_check_modules(VORBISENC REQUIRED vorbisenc)
+if(VORBISENC_FOUND)
+    message(STATUS "✅ VorbisEnc found: ${VORBISENC_VERSION}")
+else()
+    message(FATAL_ERROR "❌ VorbisEnc library not found")
+endif()
+
+pkg_check_modules(SOXR REQUIRED soxr)
+if(SOXR_FOUND)
+    message(STATUS "✅ SoXR found: ${SOXR_VERSION}")
+else()
+    message(FATAL_ERROR "❌ SoXR library not found")
+endif()
+
+# Try to fetch protobuf with timeout and error handling
+message(STATUS "Fetching protobuf dependency...")
+
+include(FetchContent)
+set(FETCHCONTENT_QUIET OFF)  # Show download progress
+
+# Set shorter timeout and better error handling
+set(FETCHCONTENT_TIMEOUT_SECONDS 300)  # 5 minutes instead of default
+
+FetchContent_Declare(protobuf
+    GIT_REPOSITORY https://github.com/protocolbuffers/protobuf.git
+    GIT_TAG v26.1
+    GIT_SHALLOW TRUE
+    GIT_PROGRESS TRUE
+    TIMEOUT 300
+)
+
+# Check if we can fetch protobuf
+FetchContent_GetProperties(protobuf)
+if(NOT protobuf_POPULATED)
+    message(STATUS "Downloading protobuf... This may take a few minutes.")
+    FetchContent_Populate(protobuf)
+    
+    # Configure protobuf with minimal components
+    set(protobuf_BUILD_TESTS OFF CACHE BOOL "")
+    set(protobuf_BUILD_EXAMPLES OFF CACHE BOOL "")
+    set(protobuf_BUILD_PROTOC_BINARIES ON CACHE BOOL "")
+    
+    add_subdirectory(${protobuf_SOURCE_DIR} ${protobuf_BINARY_DIR})
+endif()
+
+message(STATUS "✅ Protobuf configured successfully")
+
+# Create the Python extension
+message(STATUS "Creating Python extension...")
+
+add_library(_zimtohrli SHARED
+    pyohrli.cc
+)
+
+# Set target properties for Python extension
+set_target_properties(_zimtohrli PROPERTIES
+    PREFIX ""
+    SUFFIX ""
+)
+
+# Handle different platforms
+if(WIN32)
+    set_target_properties(_zimtohrli PROPERTIES SUFFIX ".pyd")
+elseif(APPLE)
+    set_target_properties(_zimtohrli PROPERTIES SUFFIX ".so")
+else()
+    set_target_properties(_zimtohrli PROPERTIES SUFFIX ".so")
+endif()
+
+# Include directories
+target_include_directories(_zimtohrli PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${Python3_INCLUDE_DIRS}
+)
+
+# Link libraries with error checking
+message(STATUS "Linking libraries...")
+
+target_link_libraries(_zimtohrli PRIVATE
+    Python3::Python
+    ${SOXR_LIBRARIES}
+    protobuf::libprotobuf
+)
+
+# Add library directories
+target_link_directories(_zimtohrli PRIVATE
+    ${SOXR_LIBRARY_DIRS}
+)
+
+# Add compile definitions
+target_compile_definitions(_zimtohrli PRIVATE
+    PY_SSIZE_T_CLEAN
+)
+
+# Compiler-specific options
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    target_compile_options(_zimtohrli PRIVATE
+        -fPIC
+        -O2  # Reduced optimization for faster compilation
+    )
+endif()
+
+message(STATUS "✅ CMake configuration completed successfully!")
