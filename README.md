@@ -234,9 +234,26 @@ The package is highly optimized:
 
 ### Installation Issues
 
+If installation fails or hangs, use the built-in debugging tools:
+
+```bash
+# Diagnose system dependencies
+python debug_install.py
+
+# Try multiple installation methods with timeouts
+./install_debug.sh
+
+# Verify installation is working
+python verify_install.py
+```
+
+**Common solutions:**
+
 1. **Missing system dependencies**: Install cmake, pkg-config, and audio libraries
-2. **Conda recommended**: `conda install -c conda-forge <packages>` often works better
-3. **Windows**: May need Visual Studio build tools
+2. **Conda recommended**: `conda install -c conda-forge <packages>` often works better  
+3. **Build hangs**: Try `CMAKE_BUILD_PARALLEL_LEVEL=1 pip install zimtohrli`
+4. **Network timeouts**: Use `pip install --timeout 1000 zimtohrli`
+5. **Windows**: May need Visual Studio build tools
 
 ### Runtime Issues
 
@@ -244,8 +261,19 @@ The package is highly optimized:
 2. **Array errors**: Ensure audio is 1D float32 numpy array
 3. **Sample rate errors**: Use positive, reasonable sample rates (>1000 Hz)
 
+### Debug Tools
+
+The package includes several debugging utilities:
+
+- `debug_install.py` - Check system dependencies and configuration
+- `install_debug.sh` - Try multiple installation methods with timeouts
+- `verify_install.py` - Test that installation is working correctly
+- `setup_minimal.py` - Minimal build for debugging specific issues
+- `TROUBLESHOOTING.md` - Comprehensive troubleshooting guide
+
 ### Getting Help
 
+- **Troubleshooting Guide**: See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for detailed solutions
 - **Documentation**: See detailed docs in the [repository](https://github.com/google/zimtohrli)
 - **Issues**: Report bugs on [GitHub Issues](https://github.com/google/zimtohrli/issues)
 - **Examples**: Check the `tests/` directory for more usage examples
