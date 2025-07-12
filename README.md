@@ -22,20 +22,23 @@ Zimtohrli is a perceptual audio similarity metric that quantifies how different 
 
 ## Installation
 
-### Quick Install (Recommended)
+### Quick Install
 
-**Clean build** - Core Zimtohrli only, no network downloads:
 ```bash
+# Default installation (uses clean build automatically)
+pip install .
+
+# Or use the convenience script
 ./install_clean.sh
 ```
 
 **Alternative methods:**
 ```bash
-# Standard pip install (may require network downloads)
-pip install zimtohrli
-
 # Offline installation (system dependencies)
 ./install_offline.sh
+
+# Full build with ViSQOL (if you really need it)
+ZIMTOHRLI_FULL_BUILD=1 pip install .
 ```
 
 ### System Dependencies

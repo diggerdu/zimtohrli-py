@@ -414,13 +414,13 @@ static PyMethodDef PyohrliModuleMethods[] = {
 
 PyModuleDef PyohrliModule = {
     .m_base = PyModuleDef_HEAD_INIT,
-    .m_name = "pyohrli",
+    .m_name = "_zimtohrli",
     .m_doc = "Python wrapper around the C++ zimtohrli library.",
     .m_size = -1,
     .m_methods = PyohrliModuleMethods,
 };
 
-PyMODINIT_FUNC PyInit__pyohrli(void) {
+PyMODINIT_FUNC PyInit__zimtohrli(void) {
   PyObject* m = PyModule_Create(&PyohrliModule);
   if (m == nullptr) return nullptr;
 
