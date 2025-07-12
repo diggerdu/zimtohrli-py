@@ -5,3 +5,6 @@ numpy>=1.19.0
 # Uncomment if you want to install audio utilities
 # soundfile>=0.12.0
 # librosa>=0.8.0
+
+# Testing dependencies (for comparison scripts)
+# soundfile>=0.12.0  # Required for comparison_implementations.py and quick_comparison_test.py
