@@ -22,35 +22,45 @@ Zimtohrli is a perceptual audio similarity metric that quantifies how different 
 
 ## Installation
 
-### Quick Install
+### Quick Install (Recommended)
 
+**Clean build** - Core Zimtohrli only, no network downloads:
 ```bash
-pip install zimtohrli
+./install_clean.sh
 ```
 
-**If installation fails due to network issues:**
+**Alternative methods:**
 ```bash
-# Use offline installation (no network required)
+# Standard pip install (may require network downloads)
+pip install zimtohrli
+
+# Offline installation (system dependencies)
 ./install_offline.sh
 ```
 
 ### System Dependencies
 
-The package requires some system libraries. Install them first:
-
-**Ubuntu/Debian:**
+**For clean build** (recommended, minimal dependencies):
 ```bash
-sudo apt update
+# Ubuntu/Debian
+sudo apt install cmake pkg-config build-essential libflac-dev libsoxr-dev
+
+# macOS  
+brew install cmake pkg-config flac soxr
+
+# Conda
+conda install -c conda-forge cmake pkg-config libflac soxr
+```
+
+**For standard build** (full dependencies):
+```bash
+# Ubuntu/Debian
 sudo apt install cmake pkg-config libflac-dev libvorbis-dev libogg-dev libopus-dev libsoxr-dev
-```
 
-**macOS:**
-```bash
+# macOS
 brew install cmake pkg-config flac libvorbis libogg opus sox
-```
 
-**Conda (recommended):**
-```bash
+# Conda
 conda install -c conda-forge cmake pkg-config libflac libvorbis libogg libopus soxr
 ```
 

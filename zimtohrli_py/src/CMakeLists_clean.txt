@@ -1,0 +1,207 @@
+cmake_minimum_required(VERSION 3.15)
+project(zimtohrli_python_clean)
+
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+message(STATUS "Building Zimtohrli Python binding (ViSQOL-free, no protobuf)")
+message(STATUS "CMAKE_CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
+message(STATUS "CMAKE_CURRENT_BINARY_DIR: ${CMAKE_CURRENT_BINARY_DIR}")
+
+# Find required packages
+find_package(PkgConfig REQUIRED)
+find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+
+# Find audio libraries
+message(STATUS "Checking for required audio libraries...")
+pkg_check_modules(FLAC REQUIRED flac)
+pkg_check_modules(OGG REQUIRED ogg)
+pkg_check_modules(VORBIS REQUIRED vorbis)
+pkg_check_modules(VORBISENC REQUIRED vorbisenc)
+pkg_check_modules(SOXR REQUIRED soxr)
+
+message(STATUS "✅ All audio libraries found")
+
+# Check for absl (Google Abseil) - try to use system version
+find_package(absl QUIET)
+if(absl_FOUND)
+    message(STATUS "✅ Using system absl")
+    set(ABSL_LIBRARIES 
+        absl::check 
+        absl::span 
+        absl::statusor 
+        absl::flags_parse
+    )
+else()
+    message(STATUS "⚠️  System absl not found, creating minimal replacements")
+    
+    # Create minimal absl replacements
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/absl/log")
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/absl/types")
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/absl/base")
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/absl/flags")
+    
+    # Minimal check.h replacement
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/absl/log/check.h" 
+"#pragma once
+#include <cassert>
+#include <iostream>
+
+#define CHECK(condition) assert(condition)
+#define CHECK_EQ(a, b) assert((a) == (b))
+#define CHECK_NE(a, b) assert((a) != (b))
+#define CHECK_LT(a, b) assert((a) < (b))
+#define CHECK_LE(a, b) assert((a) <= (b))
+#define CHECK_GT(a, b) assert((a) > (b))
+#define CHECK_GE(a, b) assert((a) >= (b))
+#define CHECK_NOTNULL(ptr) assert((ptr) != nullptr); (ptr)
+
+#define DCHECK CHECK
+#define DCHECK_EQ CHECK_EQ
+#define DCHECK_NE CHECK_NE
+#define DCHECK_LT CHECK_LT
+#define DCHECK_LE CHECK_LE
+#define DCHECK_GT CHECK_GT
+#define DCHECK_GE CHECK_GE
+")
+
+    # Minimal span.h replacement
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/absl/types/span.h"
+"#pragma once
+#include <vector>
+#include <array>
+
+namespace absl {
+template<typename T>
+class Span {
+private:
+    T* data_;
+    size_t size_;
+public:
+    Span() : data_(nullptr), size_(0) {}
+    Span(T* data, size_t size) : data_(data), size_(size) {}
+    Span(std::vector<T>& vec) : data_(vec.data()), size_(vec.size()) {}
+    template<size_t N>
+    Span(std::array<T, N>& arr) : data_(arr.data()), size_(N) {}
+    
+    T* data() const { return data_; }
+    size_t size() const { return size_; }
+    bool empty() const { return size_ == 0; }
+    T& operator[](size_t i) const { return data_[i]; }
+    T* begin() const { return data_; }
+    T* end() const { return data_ + size_; }
+};
+}
+")
+
+    # Minimal statusor.h replacement  
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/absl/status/statusor.h"
+"#pragma once
+#include <optional>
+#include <stdexcept>
+
+namespace absl {
+template<typename T>
+class StatusOr {
+private:
+    std::optional<T> value_;
+    bool ok_;
+public:
+    StatusOr(const T& value) : value_(value), ok_(true) {}
+    StatusOr() : ok_(false) {}
+    
+    bool ok() const { return ok_; }
+    const T& value() const { 
+        if (!ok_) throw std::runtime_error(\"StatusOr not ok\");
+        return *value_; 
+    }
+    T& value() { 
+        if (!ok_) throw std::runtime_error(\"StatusOr not ok\");
+        return *value_; 
+    }
+    const T& operator*() const { return value(); }
+    T& operator*() { return value(); }
+};
+}
+")
+
+    # Minimal flags_parse.h replacement
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/absl/flags/parse.h"
+"#pragma once
+#include <vector>
+#include <string>
+
+namespace absl {
+inline std::vector<char*> ParseCommandLine(int argc, char* argv[]) {
+    return std::vector<char*>(argv, argv + argc);
+}
+}
+")
+
+    set(ABSL_LIBRARIES "")  # No libraries needed for header-only replacements
+endif()
+
+# Create the Python extension
+message(STATUS "Creating Python extension...")
+
+add_library(_zimtohrli SHARED
+    pyohrli.cc
+)
+
+# Set target properties for Python extension
+set_target_properties(_zimtohrli PROPERTIES
+    PREFIX ""
+    SUFFIX ""
+)
+
+# Handle different platforms
+if(WIN32)
+    set_target_properties(_zimtohrli PROPERTIES SUFFIX ".pyd")
+elseif(APPLE)
+    set_target_properties(_zimtohrli PROPERTIES SUFFIX ".so")
+else()
+    set_target_properties(_zimtohrli PROPERTIES SUFFIX ".so")
+endif()
+
+# Include directories
+target_include_directories(_zimtohrli PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${Python3_INCLUDE_DIRS}
+)
+
+# Add minimal absl replacement include directory if needed
+if(NOT absl_FOUND)
+    target_include_directories(_zimtohrli PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+endif()
+
+# Link libraries
+message(STATUS "Linking libraries...")
+
+target_link_libraries(_zimtohrli PRIVATE
+    Python3::Python
+    ${SOXR_LIBRARIES}
+    ${ABSL_LIBRARIES}
+)
+
+# Add library directories
+target_link_directories(_zimtohrli PRIVATE
+    ${SOXR_LIBRARY_DIRS}
+)
+
+# Add compile definitions
+target_compile_definitions(_zimtohrli PRIVATE
+    PY_SSIZE_T_CLEAN
+)
+
+# Compiler-specific options
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    target_compile_options(_zimtohrli PRIVATE
+        -fPIC
+        -O2
+    )
+endif()
+
+message(STATUS "✅ Clean Zimtohrli build configuration completed!")
+message(STATUS "📦 This build includes only core Zimtohrli functionality")
+message(STATUS "🚫 No ViSQOL, no protobuf, minimal dependencies")
