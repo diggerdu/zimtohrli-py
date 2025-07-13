@@ -28,7 +28,11 @@ from .core import (
 )
 
 try:
-    from .audio_utils import load_and_compare_audio_files
+    from .audio_utils import (
+        load_and_compare_audio_files,
+        assess_audio_quality,
+        batch_compare_audio
+    )
 except ImportError:
     # soundfile/librosa not available
     pass
@@ -43,4 +47,6 @@ __all__ = [
     "get_expected_sample_rate",
     "ZimtohrliComparator",
     "load_and_compare_audio_files",
+    "assess_audio_quality",
+    "batch_compare_audio",
 ]
